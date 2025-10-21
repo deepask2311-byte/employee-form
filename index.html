@@ -9,11 +9,12 @@
         input, textarea { width: 100%; padding: 10px; margin: 10px 0; box-sizing: border-box; }
         button { background: #0078d4; color: white; padding: 10px 20px; border: none; cursor: pointer; }
         button:hover { background: #106ebe; }
+        #status { margin-top: 10px; padding: 10px; background: #f0f0f0; border-radius: 4px; display: none; }
     </style>
 </head>
 <body>
     <h1>Submit Your Details</h1>
-    <form action="https://2391259f0e5de07a8dd666cdb49656.dc.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/48db10436860420a9c111a4ede049dae/triggers/manual/paths/invoke?api-version=1" method="POST">  <!-- Paste your Power Automate URL here -->
+    <form id="submissionForm">
         <label for="name">Name:</label>
         <input type="text" id="name" name="Name" required>
         
@@ -28,6 +29,59 @@
         
         <button type="submit">Submit</button>
     </form>
-    <p>Thank you! Your details will be saved securely.</p>
+    <div id="status"></div>
+
+    <script>
+        const form = document.getElementById('submissionForm');
+        const status = document.getElementById('status');
+        const URL = 'https://2391259f0e5de07a8dd666cdb49656.dc.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/48db10436860420a9c111a4ede049dae/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=8c2OdqtHbYa1aGtcNrNCeGGTCy4tN50ipfiq4oxWSIQ';  // Paste your exact URL here
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();  // Stop default form submit
+
+            // Collect form data into JSON
+            const formData = new FormData(form);
+            const jsonData = {
+                Name: formData.get('Name'),
+                Email: formData.get('Email'),
+                Company: formData.get('Company'),
+                Message: formData.get('Message')
+            };
+
+            // Validate required fields (already handled by HTML, but extra check)
+            if (!jsonData.Name || !jsonData.Email || !jsonData.Company || !jsonData.Message) {
+                showStatus('Please fill all fields.', 'error');
+                return;
+            }
+
+            try {
+                showStatus('Submitting...', 'info');
+                const response = await fetch(URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(jsonData)
+                });
+
+                if (response.ok) {  // 202 Accepted is success for this trigger
+                    showStatus('Success! Your details have been saved.', 'success');
+                    form.reset();  // Clear form
+                } else {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+            } catch (error) {
+                console.error('Submission error:', error);
+                showStatus(`Error: ${error.message}. Check console for details.`, 'error');
+            }
+        });
+
+        function showStatus(message, type) {
+            status.textContent = message;
+            status.className = `status ${type}`;  // Add CSS for types if desired
+            status.style.display = 'block';
+            setTimeout(() => { status.style.display = 'none'; }, 5000);  // Auto-hide after 5s
+        }
+    </script>
 </body>
 </html>
