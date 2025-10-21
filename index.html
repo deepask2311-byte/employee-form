@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Details Submission</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 500px; margin: 50px auto; padding: 20px; }
+        input, textarea { width: 100%; padding: 10px; margin: 10px 0; box-sizing: border-box; }
+        button { background: #0078d4; color: white; padding: 10px 20px; border: none; cursor: pointer; }
+        button:hover { background: #106ebe; }
+    </style>
+</head>
+<body>
+    <h1>Submit Your Details</h1>
+    <form action="https://2391259f0e5de07a8dd666cdb49656.dc.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/48db10436860420a9c111a4ede049dae/triggers/manual/paths/invoke?api-version=1" method="POST">  <!-- Paste your Power Automate URL here -->
+        <label for="name">Name:</label>
+        <input type="text" id="name" name="Name" required>
+        
+        <label for="email">Email:</label>
+        <input type="email" id="email" name="Email" required>
+        
+        <label for="company">Company:</label>
+        <input type="text" id="company" name="Company" required>
+        
+        <label for="message">Message:</label>
+        <textarea id="message" name="Message" rows="4" required></textarea>
+        
+        <button type="submit">Submit</button>
+    </form>
+    <p>Thank you! Your details will be saved securely.</p>
+</body>
+</html>
