@@ -143,8 +143,10 @@
 
                 if (response.ok) {
                     showStatus('Success! Saved to SharePoint.', 'success');
-                    e.target.reset();
-                    localStorage.removeItem('verifiedEmail');  // Reset after submit
+                    // Clear only Company and Message, keep Name/Email
+                    document.getElementById('company').value = '';
+                    document.getElementById('message').value = '';
+                    // Do not remove localStorage - keeps session active
                 } else {
                     const errorText = await response.text();
                     throw new Error('Submit failed: ' + errorText);
