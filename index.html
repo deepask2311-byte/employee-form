@@ -7,82 +7,162 @@
     <style>
         body { font-family: Arial, sans-serif; max-width: 500px; margin: 50px auto; padding: 20px; }
         input, textarea { width: 100%; padding: 10px; margin: 10px 0; box-sizing: border-box; }
-        button { background: #0078d4; color: white; padding: 10px 20px; border: none; cursor: pointer; }
+        button { background: #0078d4; color: white; padding: 10px 20px; border: none; cursor: pointer; margin: 10px 0; }
         button:hover { background: #106ebe; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
         #status { margin-top: 10px; padding: 10px; background: #f0f0f0; border-radius: 4px; display: none; }
+        #emailSection { text-align: center; }
+        #formSection { display: none; }
     </style>
 </head>
 <body>
     <h1>Submit Your Details</h1>
-    <form id="submissionForm">
-        <label for="name">Name:</label>
-        <input type="text" id="name" name="Name" required>
-        
-        <label for="email">Email:</label>
-        <input type="email" id="email" name="Email" required>
-        
-        <label for="company">Company:</label>
-        <input type="text" id="company" name="Company" required>
-        
-        <label for="message">Message:</label>
-        <textarea id="message" name="Message" rows="4" required></textarea>
-        
-        <button type="submit">Submit</button>
-    </form>
+    
+    <div id="emailSection">
+        <p>Enter your email to auto-fill your name:</p>
+        <input type="email" id="emailInput" placeholder="your.email@example.com" required>
+        <button id="verifyBtn">Verify & Continue</button>
+    </div>
+    
+    <div id="formSection">
+        <form id="submissionForm">
+            <label for="name">Name:</label>
+            <input type="text" id="name" name="Name" readonly>
+            
+            <label for="email">Email:</label>
+            <input type="email" id="email" name="Email" readonly>
+            
+            <label for="company">Company:</label>
+            <input type="text" id="company" name="Company" required>
+            
+            <label for="message">Message:</label>
+            <textarea id="message" name="Message" rows="4" required></textarea>
+            
+            <button type="submit">Submit</button>
+        </form>
+    </div>
     <div id="status"></div>
 
     <script>
-        const form = document.getElementById('submissionForm');
-        const status = document.getElementById('status');
-        const URL = 'https://2391259f0e5de07a8dd666cdb49656.dc.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/48db10436860420a9c111a4ede049dae/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=8c2OdqtHbYa1aGtcNrNCeGGTCy4tN50ipfiq4oxWSIQ';           
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();  // Stop default form submit
+        const baseUrl = window.location.origin + window.location.pathname;
+        const usersUrl = baseUrl + 'users.json';
+        const flowUrl = 'https://2391259f0e5de07a8dd666cdb49656.dc.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/48db10436860420a9c111a4ede049dae/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=8c2OdqtHbYa1aGtcNrNCeGGTCy4tN50ipfiq4oxWSIQ';
+        let verifiedEmail = '';
+        let verifiedName = '';
 
-            // Collect form data into JSON
-            const formData = new FormData(form);
+        // Check localStorage for session
+        const storedEmail = localStorage.getItem('verifiedEmail');
+        if (storedEmail) {
+            verifyEmailFromStorage(storedEmail);
+        }
+
+        // Verify button and Enter key
+        document.getElementById('verifyBtn').addEventListener('click', () => verifyEmail(document.getElementById('emailInput').value.trim().toLowerCase()));
+        document.getElementById('emailInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') verifyEmail(document.getElementById('emailInput').value.trim().toLowerCase());
+        });
+
+        async function verifyEmail(email) {
+            if (!email) {
+                showStatus('Please enter your email.', 'error');
+                return;
+            }
+
+            try {
+                showStatus('Verifying...', 'info');
+                const response = await fetch(usersUrl);
+                if (!response.ok) throw new Error('User list unavailable.');
+                const data = await response.json();
+                const user = data.users.find(u => u.email.toLowerCase() === email.toLowerCase());
+
+                if (user) {
+                    verifiedEmail = email;
+                    verifiedName = user.name;
+                    localStorage.setItem('verifiedEmail', email);
+                    document.getElementById('email').value = verifiedEmail;
+                    document.getElementById('name').value = verifiedName;
+                    document.getElementById('emailSection').style.display = 'none';
+                    document.getElementById('formSection').style.display = 'block';
+                    showStatus(`Welcome, ${verifiedName}!`, 'success');
+                } else {
+                    showStatus('Email not approved. Contact admin.', 'error');
+                    localStorage.removeItem('verifiedEmail');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showStatus('Verification failed. Try again.', 'error');
+                localStorage.removeItem('verifiedEmail');
+            }
+        }
+
+        async function verifyEmailFromStorage(email) {
+            try {
+                const response = await fetch(usersUrl);
+                const data = await response.json();
+                const user = data.users.find(u => u.email.toLowerCase() === email.toLowerCase());
+                if (user) {
+                    verifiedEmail = email;
+                    verifiedName = user.name;
+                    document.getElementById('email').value = verifiedEmail;
+                    document.getElementById('name').value = verifiedName;
+                    document.getElementById('emailSection').style.display = 'none';
+                    document.getElementById('formSection').style.display = 'block';
+                } else {
+                    localStorage.removeItem('verifiedEmail');
+                    showStatus('Session invalid. Enter email again.', 'error');
+                }
+            } catch (error) {
+                localStorage.removeItem('verifiedEmail');
+                showStatus('Error loading. Enter email.', 'error');
+            }
+        }
+
+        // Submit
+        document.getElementById('submissionForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
             const jsonData = {
-                Name: formData.get('Name'),
-                Email: formData.get('Email'),
+                Name: verifiedName,
+                Email: verifiedEmail,
                 Company: formData.get('Company'),
                 Message: formData.get('Message')
             };
 
-            // Validate required fields (already handled by HTML, but extra check)
-            if (!jsonData.Name || !jsonData.Email || !jsonData.Company || !jsonData.Message) {
+            if (!jsonData.Company || !jsonData.Message) {
                 showStatus('Please fill all fields.', 'error');
                 return;
             }
 
             try {
                 showStatus('Submitting...', 'info');
-                const response = await fetch(URL, {
+                const response = await fetch(flowUrl, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(jsonData)
                 });
 
-                if (response.ok) {  // 202 Accepted is success for this trigger
-                    showStatus('Success! Your details have been saved.', 'success');
-                    form.reset();  // Clear form
+                if (response.ok) {
+                    showStatus('Success! Saved to SharePoint.', 'success');
+                    e.target.reset();
+                    localStorage.removeItem('verifiedEmail');  // Reset after submit
                 } else {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    const errorText = await response.text();
+                    throw new Error('Submit failed: ' + errorText);
                 }
             } catch (error) {
-                console.error('Submission error:', error);
-                showStatus(`Error: ${error.message}. Check console for details.`, 'error');
+                console.error('Error:', error);
+                showStatus(error.message, 'error');
             }
         });
 
         function showStatus(message, type) {
+            const status = document.getElementById('status');
             status.textContent = message;
-            status.className = `status ${type}`;  // Add CSS for types if desired
+            status.style.background = type === 'success' ? '#d4edda' : '#f8d7da';
+            status.style.color = type === 'success' ? '#155724' : '#721c24';
             status.style.display = 'block';
-            setTimeout(() => { status.style.display = 'none'; }, 5000);  // Auto-hide after 5s
+            setTimeout(() => status.style.display = 'none', 4000);
         }
     </script>
 </body>
 </html>
-
-
