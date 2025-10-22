@@ -50,11 +50,7 @@
         let verifiedEmail = '';
         let verifiedName = '';
 
-        // Check localStorage for session
-        const storedEmail = localStorage.getItem('verifiedEmail');
-        if (storedEmail) {
-            verifyEmailFromStorage(storedEmail);
-        }
+        // Always start with email section - no persistence across refresh
 
         // Verify button and Enter key
         document.getElementById('verifyBtn').addEventListener('click', () => verifyEmail(document.getElementById('emailInput').value.trim().toLowerCase()));
@@ -78,7 +74,6 @@
                 if (user) {
                     verifiedEmail = email;
                     verifiedName = user.name;
-                    localStorage.setItem('verifiedEmail', email);
                     document.getElementById('email').value = verifiedEmail;
                     document.getElementById('name').value = verifiedName;
                     document.getElementById('emailSection').style.display = 'none';
@@ -86,34 +81,10 @@
                     showStatus(`Welcome, ${verifiedName}!`, 'success');
                 } else {
                     showStatus('Email not approved. Contact admin.', 'error');
-                    localStorage.removeItem('verifiedEmail');
                 }
             } catch (error) {
                 console.error('Error:', error);
                 showStatus('Verification failed. Try again.', 'error');
-                localStorage.removeItem('verifiedEmail');
-            }
-        }
-
-        async function verifyEmailFromStorage(email) {
-            try {
-                const response = await fetch(usersUrl);
-                const data = await response.json();
-                const user = data.users.find(u => u.email.toLowerCase() === email.toLowerCase());
-                if (user) {
-                    verifiedEmail = email;
-                    verifiedName = user.name;
-                    document.getElementById('email').value = verifiedEmail;
-                    document.getElementById('name').value = verifiedName;
-                    document.getElementById('emailSection').style.display = 'none';
-                    document.getElementById('formSection').style.display = 'block';
-                } else {
-                    localStorage.removeItem('verifiedEmail');
-                    showStatus('Session invalid. Enter email again.', 'error');
-                }
-            } catch (error) {
-                localStorage.removeItem('verifiedEmail');
-                showStatus('Error loading. Enter email.', 'error');
             }
         }
 
@@ -143,10 +114,10 @@
 
                 if (response.ok) {
                     showStatus('Success! Saved to SharePoint.', 'success');
-                    // Clear only Company and Message, keep Name/Email
+                    // Clear only Company and Message, keep Name/Email filled
                     document.getElementById('company').value = '';
                     document.getElementById('message').value = '';
-                    // Do not remove localStorage - keeps session active
+                    // Form stays visible, Name/Email remain - no refresh needed
                 } else {
                     const errorText = await response.text();
                     throw new Error('Submit failed: ' + errorText);
